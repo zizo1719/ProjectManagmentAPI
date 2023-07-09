@@ -1,14 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Project_Managment_API._Attributes;
 using Project_Managment_API.Model;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using Task = Project_Managment_API.Model.Task;
 
 namespace Project_Management_API.Data
 {
-    public class ProjectManagementDbContext : DbContext
+    public class ProjectManagementDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ProjectManagementDbContext(DbContextOptions<ProjectManagementDbContext> options) : base(options)
+        private static string CurrentTenantId { get; set; }
+
+        public ProjectManagementDbContext(DbContextOptions<ProjectManagementDbContext> options, IHttpContextAccessor httpContextAccessor)
+            : base(options)
         {
+            CurrentTenantId = httpContextAccessor?.HttpContext?.User?.FindFirst("TenantID")?.Value;
         }
 
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
@@ -16,8 +25,12 @@ namespace Project_Management_API.Data
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectUser> ProjectUsers { get; set; }
-        public DbSet<Project_Managment_API.Model.Task> Tasks { get; set; }
+        public DbSet<Task> Tasks { get; set; }
         public DbSet<TaskUser> TaskUsers { get; set; }
+        public DbSet<Tenant> Tenants { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<OtpModel> OtpModels { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -52,14 +65,47 @@ namespace Project_Management_API.Data
             modelBuilder.Entity<Comment>()
                 .HasOne(c => c.Task)
                 .WithMany(t => t.Comments)
-                .HasForeignKey(c => c.TaskId);
+                .HasForeignKey(c => c.TaskId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Attachment>()
                 .HasOne(a => a.Task)
                 .WithMany(t => t.Attachments)
-                .HasForeignKey(a => a.TaskId);
+                .HasForeignKey(a => a.TaskId)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Project>()
+                .HasOne(p => p.Tenant)
+                .WithMany(t => t.Projects)
+                .HasForeignKey(p => p.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne(u => u.Tenant)
+                .WithMany(t => t.ApplicationUsers)
+                .HasForeignKey(u => u.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasMany(u => u.SentMessages)
+                .WithOne(m => m.Sender)
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasMany(u => u.ReceivedMessages)
+                .WithOne(m => m.Receiver)
+                .HasForeignKey(m => m.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            modelBuilder.Entity<Tenant>()
+                    .HasIndex(u => u.Name)
+                    .IsUnique();
+            
+                     
+
+            modelBuilder.ApplyMultiTenantQueryFilters(CurrentTenantId);
         }
-
     }
 }

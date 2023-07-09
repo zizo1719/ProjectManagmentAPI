@@ -1,0 +1,31 @@
+# Visual Studio files
+.vs/
+/bin/
+/obj/
+/.vscode/
+/Properties/
+
+# Build artifacts
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+*.csv
+
+# NuGet packages
+## If you have dependencies managed by NuGet, uncomment the following line:
+# packages/
+
+# User-specific files
+*.suo
+*.user
+*.userprefs
+*.sln.docstates
+
+# Test results
+TestResults/
+
+# Misc
+Thumbs.db
+*.DS_Store
